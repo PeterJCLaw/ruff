@@ -39,10 +39,25 @@ pub(crate) fn check_imports(
         tracker
     };
 
-    let blocks: Vec<&Block> = tracker.iter().collect();
+    let mut blocks: Vec<&Block> = tracker.iter().collect();
+    let mut top: Block<'_>;
 
     // Enforce import rules.
     if context.is_rule_enabled(Rule::UnsortedImports) {
+        if !blocks.is_empty() {
+            let first = blocks[0];
+            top = Block {
+                nested: first.nested,
+                imports: vec![],
+                trailer: first.trailer,
+            };
+            for block in &blocks {
+                top.imports.extend(&block.imports);
+            }
+            blocks.clear();
+            blocks.push(&top);
+        }
+
         for block in &blocks {
             if !block.imports.is_empty() {
                 isort::rules::organize_imports(

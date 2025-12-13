@@ -122,6 +122,8 @@ pub(crate) fn organize_imports(
         trailing_lines_end(block.imports.last().unwrap(), locator.contents())
     };
 
+    println!("fn main() {{ {block:?}; }}");
+
     // Generate the sorted import block.
     let expected = format_imports(
         block,
