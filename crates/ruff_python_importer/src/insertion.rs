@@ -69,6 +69,8 @@ impl<'a> Insertion<'a> {
             })
             .unwrap_or(body);
 
+        let mut at_start: bool = false;
+
         // Skip over any docstrings.
         let mut location = if let Some(mut location) = match_docstring_end(body) {
             // If the first token after the docstring is a semicolon, insert after the semicolon as
@@ -88,8 +90,10 @@ impl<'a> Insertion<'a> {
         } else if let Some(range) = within_range
             && range.start() != TextSize::ZERO
         {
+            at_start = true;
             range.start()
         } else {
+            at_start = true;
             contents.bom_start_offset()
         };
 
@@ -102,13 +106,28 @@ impl<'a> Insertion<'a> {
                 continue;
             }
             if trimmed_line.starts_with('#') {
+                at_start = false;
                 location = line.full_end();
             } else {
                 break;
             }
         }
 
-        Insertion::own_line("", location, stylist.line_ending().as_str())
+        // If followed by a blank line, then prefix our insertion with a newline too.
+        let mut prefix = "";
+        if !at_start {
+            if let Some(line) =
+                UniversalNewlineIterator::with_offset(&contents[location.to_usize()..], location)
+                    .next()
+            {
+                let trimmed_line = line.trim_whitespace_start();
+                if trimmed_line.is_empty() {
+                    prefix = stylist.line_ending().as_str();
+                }
+            }
+        }
+
+        Insertion::own_line(prefix, location, stylist.line_ending().as_str())
     }
 
     /// Create an [`Insertion`] to insert (e.g.) an import after the end of the given
